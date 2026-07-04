@@ -34,6 +34,8 @@ public class SecurityConfig {
                     "/auth/login/mfa/verify",
                     "/auth/refresh",
                     "/auth/logout",
+                    "/auth/users",
+                    "/auth/users/**",
                     "/actuator/**"
                 ).permitAll()
                 .anyRequest().authenticated()

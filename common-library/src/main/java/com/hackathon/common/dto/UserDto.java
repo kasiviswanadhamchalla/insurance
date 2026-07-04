@@ -18,4 +18,6 @@ public class UserDto {
     private List<String> roles;
     private boolean enabled;
     private boolean mfaEnabled;
+    private boolean approved;
+    private String password;
 }

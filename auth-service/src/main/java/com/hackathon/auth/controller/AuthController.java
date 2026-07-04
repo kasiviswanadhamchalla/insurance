@@ -37,6 +37,7 @@ public class AuthController {
     @PostMapping("/login")
     public ResponseEntity<ApiResponse<LoginResponse>> login(@Valid @RequestBody LoginRequest request, 
                                                             HttpServletResponse response) {
+        System.out.println(request.getPassword()+" "+request.getUsername());
         LoginResponse loginResponse = authService.login(request);
         
         if (loginResponse.isMfaRequired()) {
@@ -147,5 +148,17 @@ public class AuthController {
         }
         UserDto profile = authService.getUserProfile(username);
         return ResponseEntity.ok(ApiResponse.success(profile, "Profile retrieved successfully"));
+    }
+
+    @GetMapping("/users")
+    public ResponseEntity<ApiResponse<java.util.List<UserDto>>> getAllUsers() {
+        java.util.List<UserDto> users = authService.getAllUsers();
+        return ResponseEntity.ok(ApiResponse.success(users, "All registered users retrieved successfully"));
+    }
+
+    @PostMapping("/users/{id}/approve")
+    public ResponseEntity<ApiResponse<String>> approveUser(@PathVariable("id") Long id) {
+        authService.approveUser(id);
+        return ResponseEntity.ok(ApiResponse.success("User approved successfully", "User approved successfully"));
     }
 }

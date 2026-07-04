@@ -1,5 +1,5 @@
 import React, { createContext, useState, useEffect, useContext } from 'react';
-import { mockDb, initMockDb } from '../services/mockDb';
+import api from '../services/api';
 import { toast } from 'react-toastify';
 
 const AuthContext = createContext(null);
@@ -7,13 +7,10 @@ const AuthContext = createContext(null);
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [mfaSession, setMfaSession] = useState(null); // { transactionId, tempUser, otpCode }
+  const [mfaSession, setMfaSession] = useState(null); // { transactionId, tempUser }
 
   useEffect(() => {
-    // Initialize Mock DB
-    initMockDb();
-    
-    // Check for existing token
+    // Check for existing token and user session
     const token = localStorage.getItem('ins_token');
     const savedUser = localStorage.getItem('ins_current_user');
     if (token && savedUser) {
@@ -24,140 +21,131 @@ export const AuthProvider = ({ children }) => {
 
   const loginStep1 = async (username, password) => {
     try {
-      const users = mockDb.getUsers();
-      let normalizedUsername = username.trim().toLowerCase();
-      if (normalizedUsername.startsWith('fruad_')) {
-        normalizedUsername = normalizedUsername.replace('fruad_', 'fraud_');
-      }
-      if (normalizedUsername.startsWith('cliam_')) {
-        normalizedUsername = normalizedUsername.replace('cliam_', 'claim_');
-      }
+      const response = await api.post('/auth/login', { username, password });
+      const data = response.data;
       
-      // Alias mapping
-      if (normalizedUsername === 'fraud_manager@insurance.com') {
-        normalizedUsername = 'manager@insurance.com';
-      }
-      if (normalizedUsername === 'fraud_officer@insurance.com' || normalizedUsername === 'processor@insurance.com') {
-        normalizedUsername = 'claim_officer@insurance.com';
-      }
-      
-      const foundUser = users.find(u => u.username.toLowerCase() === normalizedUsername && u.password === password);
-      
-      if (!foundUser) {
-        toast.error('Invalid credentials. Please verify username and password.');
+      if (data.success && data.data) {
+        const loginData = data.data;
+        if (loginData.mfaRequired) {
+          const tempMapped = mapUserRole(loginData.user);
+          setMfaSession({
+            transactionId: loginData.mfaTransactionId,
+            tempUser: tempMapped
+          });
+          return { success: true, mfaRequired: true, transactionId: loginData.mfaTransactionId };
+        } else {
+          completeLogin(loginData.accessToken, loginData.user);
+          return { success: true, mfaRequired: false, user: mapUserRole(loginData.user) };
+        }
+      } else {
+        toast.error(data.message || 'Invalid credentials');
         return { success: false, mfaRequired: false };
       }
-
-      if (foundUser.approved === false) {
-        toast.error('Access Denied: Your staff account is pending administrator approval.');
-        return { success: false, mfaRequired: false };
-      }
-
-      // Bypass MFA entirely and login directly
-      completeLogin(foundUser);
-      return { success: true, mfaRequired: false, user: foundUser };
     } catch (error) {
-      toast.error('An error occurred during login.');
+      const errorMsg = error.response?.data?.message || 'Invalid credentials. Please verify username and password.';
+      toast.error(errorMsg);
       return { success: false, mfaRequired: false };
     }
   };
 
   const verifyMfa = async (transactionId, otpCode) => {
     try {
-      if (!mfaSession || mfaSession.transactionId !== transactionId) {
-        toast.error('Invalid MFA session. Please log in again.');
+      const response = await api.post('/auth/login/mfa/verify', {
+        mfaTransactionId: transactionId,
+        code: otpCode
+      });
+      const data = response.data;
+      
+      if (data.success && data.data) {
+        completeLogin(data.data.accessToken, data.data.user);
+        setMfaSession(null);
+        return { success: true, user: mapUserRole(data.data.user) };
+      } else {
+        toast.error(data.message || 'MFA token incorrect or expired.');
         return { success: false };
       }
-
-      if (mfaSession.otpCode !== otpCode) {
-        toast.error('MFA token incorrect or expired. Resubmit new code.');
-        mockDb.addAuditLog(mfaSession.tempUser.id, mfaSession.tempUser.username, null, 'MFA_FAILED', `Failed OTP verification for Txn ID ${transactionId}.`);
-        return { success: false };
-      }
-
-      const loggedUser = mfaSession.tempUser;
-      completeLogin(loggedUser);
-      setMfaSession(null);
-      return { success: true, user: loggedUser };
     } catch (error) {
-      toast.error('An error occurred during MFA verification.');
+      toast.error(error.response?.data?.message || 'MFA token incorrect or expired.');
       return { success: false };
     }
   };
 
-  const completeLogin = (loggedInUser) => {
-    // Generate a mock JWT
-    const mockJwt = `eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.${btoa(JSON.stringify(loggedInUser))}.signature`;
-    
-    localStorage.setItem('ins_token', mockJwt);
-    localStorage.setItem('ins_current_user', JSON.stringify(loggedInUser));
-    
-    setUser(loggedInUser);
-    
-    // Audit Log
-    mockDb.addAuditLog(loggedInUser.id, loggedInUser.username, null, 'USER_LOGIN', `User logged in with role: ${loggedInUser.role}`);
-    
+  const completeLogin = (token, rawUser) => {
+    const mapped = mapUserRole(rawUser);
+    localStorage.setItem('ins_token', token);
+    localStorage.setItem('ins_current_user', JSON.stringify(mapped));
+    setUser(mapped);
     toast.success('Logged successfully');
+  };
+
+  const mapUserRole = (rawUser) => {
+    let feRole = 'CUSTOMER';
+    if (rawUser.roles && rawUser.roles.length > 0) {
+      const beRole = rawUser.roles[0];
+      if (beRole === 'ROLE_ADMIN') feRole = 'SYSTEM_ADMIN';
+      else if (beRole === 'ROLE_PROCESSOR') feRole = 'CLAIM_OFFICER';
+      else if (beRole === 'ROLE_MANAGER') feRole = 'CLAIM_MANAGER';
+      else if (beRole === 'ROLE_AUDITOR') feRole = 'AUDITOR';
+    }
+    return {
+      id: rawUser.id.toString(),
+      username: rawUser.username,
+      email: rawUser.email,
+      role: feRole,
+      name: rawUser.username.split('@')[0].replace(/_/g, ' '),
+      mfaEnabled: rawUser.mfaEnabled,
+      approved: rawUser.approved !== false
+    };
   };
 
   const register = async (username, email, password, name, role) => {
     try {
-      const users = mockDb.getUsers();
-      if (users.find(u => u.username.toLowerCase() === username.toLowerCase() || u.email.toLowerCase() === email.toLowerCase())) {
-        toast.error('Username or email already exists.');
-        return false;
-      }
+      let beRole = 'ROLE_USER';
+      if (role === 'SYSTEM_ADMIN') beRole = 'ROLE_ADMIN';
+      else if (role === 'CLAIM_OFFICER') beRole = 'ROLE_PROCESSOR';
+      else if (role === 'CLAIM_MANAGER') beRole = 'ROLE_MANAGER';
+      else if (role === 'AUDITOR') beRole = 'ROLE_AUDITOR';
 
-      const newUser = {
-        id: (users.length + 1).toString(),
+      const response = await api.post('/auth/register', {
         username,
         email,
         password,
-        role,
-        name,
-        mfaEnabled: true,
-        approved: role === 'CUSTOMER'
-      };
-
-      users.push(newUser);
-      mockDb.saveUsers(users);
+        fullName: name,
+        roles: [beRole]
+      });
       
-      // Audit Log
-      mockDb.addAuditLog(newUser.id, newUser.username, null, 'USER_REGISTER', `New user registered with role: ${role}`);
-      
-      toast.success('Register successfully');
-      return true;
+      if (response.data.success) {
+        toast.success('Registration successful! Pending admin approval.');
+        return true;
+      } else {
+        toast.error(response.data.message || 'Registration failed');
+        return false;
+      }
     } catch (error) {
-      toast.error('An error occurred during registration.');
+      toast.error(error.response?.data?.message || 'An error occurred during registration.');
       return false;
     }
   };
 
-  const logout = () => {
-    if (user) {
-      mockDb.addAuditLog(user.id, user.username, null, 'USER_LOGOUT', `User logged out.`);
-      // Invalidate cache and clear storage
-      localStorage.removeItem('ins_token');
-      localStorage.removeItem('ins_current_user');
-      setUser(null);
-      toast.success('You have successfully logged out.');
-    }
+  const logout = async () => {
+    try {
+      await api.post('/auth/logout');
+    } catch (e) {}
+    localStorage.removeItem('ins_token');
+    localStorage.removeItem('ins_current_user');
+    setUser(null);
+    toast.success('You have successfully logged out.');
   };
 
-  const toggleMfa = (enabled) => {
-    if (!user) return;
-    const users = mockDb.getUsers();
-    const userIndex = users.findIndex(u => u.id === user.id);
-    if (userIndex > -1) {
-      users[userIndex].mfaEnabled = enabled;
-      mockDb.saveUsers(users);
-      
+  const toggleMfa = async (enabled) => {
+    try {
+      await api.post(`/auth/mfa/setup`, { enabled });
       const updatedUser = { ...user, mfaEnabled: enabled };
       setUser(updatedUser);
       localStorage.setItem('ins_current_user', JSON.stringify(updatedUser));
-      
-      mockDb.addAuditLog(user.id, user.username, null, 'MFA_TOGGLE', `MFA preference set to ${enabled}.`);
       toast.success(`MFA has been ${enabled ? 'enabled' : 'disabled'} successfully.`);
+    } catch (error) {
+      toast.error(error.response?.data?.message || 'Failed to update MFA settings.');
     }
   };
 

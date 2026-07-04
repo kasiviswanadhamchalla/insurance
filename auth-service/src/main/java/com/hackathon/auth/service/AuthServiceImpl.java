@@ -26,6 +26,7 @@ import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.List;
 import java.util.Random;
+import java.util.HashSet;
 import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
@@ -69,15 +70,26 @@ public class AuthServiceImpl implements AuthService {
             throw new BadRequestException("Email is already registered");
         }
 
-        Role userRole = roleRepository.findByName("ROLE_USER")
-                .orElseThrow(() -> new ResourceNotFoundException("Default User Role not found"));
+        Set<Role> assignedRoles = new HashSet<>();
+        if (request.getRoles() != null && !request.getRoles().isEmpty()) {
+            for (String roleName : request.getRoles()) {
+                Role r = roleRepository.findByName(roleName)
+                        .orElseThrow(() -> new ResourceNotFoundException("Role not found: " + roleName));
+                assignedRoles.add(r);
+            }
+        } else {
+            Role userRole = roleRepository.findByName("ROLE_USER")
+                    .orElseThrow(() -> new ResourceNotFoundException("Default User Role not found"));
+            assignedRoles.add(userRole);
+        }
 
         User user = User.builder()
                 .username(request.getUsername())
                 .email(request.getEmail())
                 .password(passwordEncoder.encode(request.getPassword()))
-                .enabled(true)
-                .roles(Set.of(userRole))
+                .enabled(false)
+                .approved(false)
+                .roles(assignedRoles)
                 .build();
 
         User savedUser = userRepository.save(user);
@@ -86,11 +98,17 @@ public class AuthServiceImpl implements AuthService {
 
     @Override
     public LoginResponse login(LoginRequest request) {
+        System.out.println(request.getPassword()+" "+request.getUsername());
         User user = userRepository.findByUsername(request.getUsername())
+                .or(() -> userRepository.findByEmail(request.getUsername()))
                 .orElseThrow(() -> new UnauthorizedException("Invalid username or password"));
 
         if (!passwordEncoder.matches(request.getPassword(), user.getPassword())) {
             throw new UnauthorizedException("Invalid username or password");
+        }
+
+        if (!user.isApproved()) {
+            throw new UnauthorizedException("Your registration request is pending admin approval.");
         }
 
         if (!user.isEnabled()) {
@@ -269,5 +287,23 @@ public class AuthServiceImpl implements AuthService {
                         .expiryDate(expiryDate)
                         .build())
         );
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<UserDto> getAllUsers() {
+        return userRepository.findAll().stream()
+                .map(userMapper::toDto)
+                .collect(Collectors.toList());
+    }
+
+    @Override
+    public void approveUser(Long userId) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new ResourceNotFoundException("User not found with id: " + userId));
+        user.setApproved(true);
+        user.setEnabled(true);
+        userRepository.save(user);
+        log.info("User ID {} ({}) approved by Admin", userId, user.getUsername());
     }
 }

@@ -31,7 +31,11 @@ public class User {
 
     @Builder.Default
     @Column(nullable = false)
-    private boolean enabled = true;
+    private boolean enabled = false;
+
+    @Builder.Default
+    @Column(name = "approved", nullable = false)
+    private boolean approved = false;
 
     @Builder.Default
     @ManyToMany(fetch = FetchType.EAGER)

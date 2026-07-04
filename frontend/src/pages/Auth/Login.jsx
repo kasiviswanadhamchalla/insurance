@@ -39,6 +39,7 @@ const Login = () => {
 
   const handleCredentialsSubmit = async (values) => {
     setLoading(true);
+    console.log(values);
     const result = await loginStep1(values.username, values.password);
     setLoading(false);
 

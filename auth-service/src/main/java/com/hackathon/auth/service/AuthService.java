@@ -11,4 +11,6 @@ public interface AuthService {
     UserDto getUserProfile(String username);
     LoginResponse verifyMfa(MfaVerifyRequest request);
     void setupMfa(String username, MfaSetupRequest request);
+    java.util.List<UserDto> getAllUsers();
+    void approveUser(Long userId);
 }
