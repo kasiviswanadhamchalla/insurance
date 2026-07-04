@@ -1,0 +1,54 @@
+server:
+  port: 8080
+
+spring:
+  cloud:
+    gateway:
+      mvc:
+        discovery:
+          locator:
+            enabled: true
+            lower-case-service-id: true
+        routes:
+          - id: auth-service
+            uri: lb://auth-service
+            predicates:
+              - Path=/auth/**
+            filters:
+              - StripPrefix=0
+          - id: notification-service
+            uri: lb://notification-service
+            predicates:
+              - Path=/notifications/**
+            filters:
+              - StripPrefix=0
+          - id: document-service
+            uri: lb://document-service
+            predicates:
+              - Path=/claims/*/documents, /claims/*/documents/**, /documents/**
+            filters:
+              - StripPrefix=0
+          - id: claim-service
+            uri: lb://claim-service
+            predicates:
+              - Path=/claims, /claims/**
+            filters:
+              - StripPrefix=0
+          - id: fraud-service
+            uri: lb://fraud-service
+            predicates:
+              - Path=/fraud/**
+            filters:
+              - StripPrefix=0
+          - id: workflow-service
+            uri: lb://workflow-service
+            predicates:
+              - Path=/tasks/**
+            filters:
+              - StripPrefix=0
+          - id: audit-service
+            uri: lb://audit-service
+            predicates:
+              - Path=/audit/**
+            filters:
+              - StripPrefix=0
