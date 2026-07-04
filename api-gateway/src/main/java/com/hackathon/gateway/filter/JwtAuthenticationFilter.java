@@ -24,6 +24,8 @@ public class JwtAuthenticationFilter implements Filter {
             "/auth/register",
             "/auth/refresh",
             "/auth/logout",
+            "/auth/users",
+            "/auth/users/**",
             "**/actuator/**"
     );
 
@@ -37,6 +39,12 @@ public class JwtAuthenticationFilter implements Filter {
         HttpServletRequest httpRequest = (HttpServletRequest) request;
         HttpServletResponse httpResponse = (HttpServletResponse) response;
         String path = httpRequest.getRequestURI();
+
+        // Bypass CORS preflight OPTIONS requests
+        if ("OPTIONS".equalsIgnoreCase(httpRequest.getMethod())) {
+            chain.doFilter(request, response);
+            return;
+        }
 
         boolean isPublic = PUBLIC_ENDPOINTS.stream()
                 .anyMatch(pattern -> pathMatcher.match(pattern, path));
