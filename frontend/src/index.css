@@ -9,37 +9,323 @@ body {
   font-family: 'Inter', sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  background-color: #070B14; /* Deep dark reference background */
-  color: #E2E8F0;
+  background-color: #f8fafc; /* Beautiful soft slate-50 background */
+  color: #0f172a; /* Slate-900 body text */
 }
 
-/* Custom text selection colors */
+/* Premium Light Theme Selection Colors */
 ::selection {
-  background-color: rgba(20, 184, 166, 0.25); /* teal-500 selection */
-  color: #99f6e4;
+  background-color: rgba(20, 184, 166, 0.15); /* teal-500 light selection */
+  color: #0d9488;
 }
 
-/* Custom scrollbars */
+/* Custom scrollbars - Light Theme */
 ::-webkit-scrollbar {
   width: 6px;
   height: 6px;
 }
 ::-webkit-scrollbar-track {
-  background: #020617;
+  background: #f1f5f9;
 }
 ::-webkit-scrollbar-thumb {
-  background: #1e293b;
+  background: #cbd5e1;
   border-radius: 9999px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: #334155;
+  background: #94a3b8;
 }
 
-/* Reusable Glassmorphism Cards */
+/* Glassmorphism Cards - Premium Light Edition */
 .glass-card {
-  background: rgba(15, 23, 42, 0.65);
+  background: rgba(255, 255, 255, 0.75);
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
-  border: 1px solid rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(15, 23, 42, 0.06);
+  box-shadow: 0 4px 30px rgba(0, 0, 0, 0.03);
 }
 
+/* ==========================================
+   GLOBAL PREMIUM LIGHT THEME OVERRIDES
+   ========================================== */
+
+/* 1. Main Backgrounds & Layout Wrapper */
+body, 
+html, 
+main,
+.bg-\[\#0a0f1d\],
+.bg-\[\#0b1329\] {
+  background-color: #f8fafc !important;
+  background-image: none !important;
+  color: #0f172a !important;
+}
+
+/* 2. Sidebar Navigation */
+aside, 
+.bg-\[\#0f172a\],
+aside .bg-\[\#0f172a\] {
+  background-color: #ffffff !important;
+  border-right: 1px solid #e2e8f0 !important;
+}
+aside button, 
+aside a {
+  color: #475569 !important;
+}
+aside button.text-rose-400,
+aside button[class*="text-rose"] {
+  color: #dc2626 !important; /* Restore red text color */
+}
+aside button.text-rose-400:hover,
+aside button[class*="text-rose"]:hover {
+  background-color: #ffe4e6 !important; /* Soft rose background on hover */
+  color: #be123c !important; /* Darker red on hover */
+}
+aside a:hover {
+  background-color: #f1f5f9 !important;
+  color: #0f172a !important;
+}
+aside a[class*="bg-teal-600"] {
+  background-color: #0d9488 !important; /* Premium Teal-600 */
+  color: #ffffff !important;
+}
+aside a[class*="bg-teal-600"] span {
+  color: #ffffff !important;
+}
+aside .bg-slate-800\/40 {
+  background-color: #f8fafc !important;
+  border: 1px solid #e2e8f0 !important;
+}
+aside span.text-slate-200 {
+  color: #0f172a !important;
+}
+
+/* 3. Header & Notifications */
+header {
+  background-color: rgba(255, 255, 255, 0.8) !important;
+  backdrop-filter: blur(8px);
+  border-bottom: 1px solid #e2e8f0 !important;
+}
+header h1, 
+header span {
+  color: #0f172a !important;
+}
+header button {
+  background-color: #f1f5f9 !important;
+  color: #475569 !important;
+  border: 1px solid #e2e8f0 !important;
+}
+header button:hover {
+  background-color: #e2e8f0 !important;
+  color: #0f172a !important;
+}
+header div[class*="bg-slate-900"] {
+  background-color: #ffffff !important;
+  border: 1px solid #e2e8f0 !important;
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.08);
+}
+header div[class*="bg-slate-800\/40"] {
+  background-color: #f8fafc !important;
+  border-left: 2px solid #0d9488 !important;
+}
+
+/* 4. Cards & Containers */
+div.bg-\[\#0f172a\]\/70,
+div.bg-slate-900\/60,
+div.bg-slate-900\/30,
+div.bg-slate-900\/50,
+div.bg-\[\#111827\]\/60 {
+  background-color: #ffffff !important;
+  border: 1px solid #e2e8f0 !important;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.02) !important;
+  color: #0f172a !important;
+}
+div.bg-slate-900\/80 {
+  background-color: #f8fafc !important;
+  border: 1px solid #e2e8f0 !important;
+}
+
+/* Stat Cards */
+div[class*="bg-\[\#111827\]\/60"] {
+  background-color: #ffffff !important;
+  border: 1px solid #e2e8f0 !important;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.01) !important;
+}
+div[class*="bg-\[\#111827\]\/60"] span.text-slate-200,
+div[class*="bg-\[\#111827\]\/60"] span.text-slate-400 {
+  color: #1e293b !important;
+}
+
+/* 5. Typography */
+h1, h2, h3, h4, h5, h6 {
+  color: #0f172a !important;
+}
+p, span, label, td, li {
+  color: #334155 !important;
+}
+.text-slate-100 { color: #0f172a !important; }
+.text-slate-200 { color: #1e293b !important; }
+.text-slate-300 { color: #334155 !important; }
+.text-slate-350 { color: #475569 !important; }
+.text-slate-400 { color: #64748b !important; }
+.text-slate-500 { color: #64748b !important; }
+.text-slate-450 { color: #475569 !important; }
+
+/* 6. Form Inputs & Selects */
+input[type="text"],
+input[type="number"],
+input[type="email"],
+input[type="password"],
+input[type="date"],
+select,
+textarea {
+  background-color: #ffffff !important;
+  color: #0f172a !important;
+  border: 1px solid #cbd5e1 !important;
+}
+input:focus, select:focus, textarea:focus {
+  border-color: #0d9488 !important; /* teal-600 focus border */
+  box-shadow: 0 0 0 2px rgba(13, 148, 136, 0.15) !important;
+}
+input::placeholder, textarea::placeholder {
+  color: #94a3b8 !important;
+}
+
+/* 7. Tables */
+table {
+  background-color: #ffffff !important;
+}
+thead, 
+.bg-\[\#111827\]\/80 {
+  background-color: #f1f5f9 !important;
+  border-bottom: 1px solid #e2e8f0 !important;
+}
+th {
+  color: #475569 !important;
+}
+tr {
+  background-color: #ffffff !important;
+  border-bottom: 1px solid #f1f5f9 !important;
+}
+tr:hover,
+tr.hover\:bg-slate-800\/30:hover,
+tr.hover\:bg-slate-850\/30:hover {
+  background-color: #f8fafc !important;
+}
+td {
+  color: #334155 !important;
+}
+
+/* 8. Divider lines */
+.border-slate-800,
+.border-slate-850,
+.border-slate-855,
+.border-slate-700,
+.divide-slate-850 {
+  border-color: #e2e8f0 !important;
+}
+
+/* 9. Buttons & Interactive Badges */
+/* Targets buttons that are styled as dark/neutral to make them light */
+button.bg-slate-900,
+button.bg-slate-800,
+button.bg-slate-950,
+button.bg-\[\#0f172a\],
+button.bg-\[\#0a0f1d\],
+button.bg-\[\#111827\],
+button.bg-slate-800\/40,
+button.bg-slate-900\/50,
+button.bg-slate-900\/60,
+button.bg-slate-900\/30,
+button.bg-\[\#0f172a\]\/70,
+button.border-slate-800 {
+  background-color: #ffffff !important;
+  color: #1e293b !important;
+  border: 1px solid #cbd5e1 !important;
+}
+
+button.bg-slate-900:hover,
+button.bg-slate-800:hover,
+button.bg-slate-950:hover,
+button.bg-\[\#0f172a\]:hover,
+button.bg-slate-800\/40:hover,
+button.bg-slate-900\/50:hover,
+button.bg-slate-900\/60:hover,
+button.bg-slate-900\/30:hover {
+  background-color: #f1f5f9 !important;
+  color: #0f172a !important;
+  border-color: #cbd5e1 !important;
+}
+
+/* Ensure action buttons with color/gradients keep white text */
+button[class*="bg-teal"],
+button[class*="bg-emerald"],
+button[class*="bg-rose"],
+button[class*="bg-orange"],
+button[class*="bg-gradient"],
+button[class*="from-teal"],
+button[class*="from-emerald"],
+button[class*="from-rose"],
+button[class*="from-orange"],
+button[class*="from-blue"],
+button[type="submit"],
+.bg-teal-650,
+.bg-teal-600,
+.bg-orange-650,
+.bg-orange-600,
+a[class*="from-teal"],
+a[class*="bg-gradient"] {
+  color: #ffffff !important;
+}
+span[class*="bg-slate-850"] {
+  background-color: #f1f5f9 !important;
+  border: 1px solid #e2e8f0 !important;
+  color: #475569 !important;
+}
+span[class*="bg-yellow-950"] {
+  background-color: #fef9c3 !important;
+  color: #854d0e !important;
+  border-color: #fef08a !important;
+}
+span[class*="bg-rose-950"] {
+  background-color: #ffe4e6 !important;
+  color: #991b1b !important;
+  border-color: #fecdd3 !important;
+}
+span[class*="bg-emerald-950"] {
+  background-color: #d1fae5 !important;
+  color: #065f46 !important;
+  border-color: #a7f3d0 !important;
+}
+span[class*="bg-indigo-950"] {
+  background-color: #e0e7ff !important;
+  color: #3730a3 !important;
+  border-color: #c7d2fe !important;
+}
+span[class*="bg-blue-950"] {
+  background-color: #dbeafe !important;
+  color: #1e40af !important;
+  border-color: #bfdbfe !important;
+}
+span[class*="bg-orange-950"] {
+  background-color: #ffedd5 !important;
+  color: #9a3412 !important;
+  border-color: #fed7aa !important;
+}
+span[class*="bg-pink-950"] {
+  background-color: #fce7f3 !important;
+  color: #9d174d !important;
+  border-color: #fbcfe8 !important;
+}
+
+/* 10. High Contrast Colors for Light Backgrounds (General Overrides) */
+.text-teal-400 { color: #0d9488 !important; }
+.text-emerald-400 { color: #059669 !important; }
+.text-emerald-450 { color: #059669 !important; }
+.text-yellow-400 { color: #a16207 !important; }
+.text-rose-400 { color: #dc2626 !important; }
+.text-rose-455 { color: #dc2626 !important; }
+.text-orange-400 { color: #ea580c !important; }
+.text-indigo-400 { color: #4f46e5 !important; }
+.text-blue-400 { color: #2563eb !important; }
+.text-pink-400 { color: #db2777 !important; }
+.text-slate-350 { color: #334155 !important; }
+.text-slate-450 { color: #475569 !important; }

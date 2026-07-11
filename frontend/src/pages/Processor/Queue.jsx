@@ -9,8 +9,8 @@ const Queue = () => {
   const navigate = useNavigate();
   const [tasks, setTasks] = useState([]);
 
-  const fetchQueueTasks = () => {
-    const allTasks = mockDb.getTasks();
+  const fetchQueueTasks = async () => {
+    const allTasks = await mockDb.getTasks();
     // Filter tasks intended for processors that are currently unclaimed
     setTasks(allTasks.filter(t => t.assignedRole === 'CLAIM_OFFICER' && !t.assignedUser));
   };
@@ -19,14 +19,14 @@ const Queue = () => {
     fetchQueueTasks();
   }, []);
 
-  const handleClaimTask = (taskId) => {
+  const handleClaimTask = async (taskId) => {
     try {
-      mockDb.claimTask(taskId, user);
+      await mockDb.claimTask(taskId, user);
       toast.success('Task successfully claimed! Loading workstation...');
       navigate(`/processor/tasks/${taskId}`);
     } catch (error) {
       toast.error(error.message || 'Failed to claim task. It may have been locked by another processor.');
-      fetchQueueTasks(); // refresh
+      await fetchQueueTasks(); // refresh
     }
   };
 

@@ -64,6 +64,6 @@ public class DatabaseInitializer implements CommandLineRunner {
                 .build();
         userRepository.save(admin);
         
-        log.info("Seeded primary admin user: admin (admin@hackathon.com) / Password123!");
+        log.info("Seeded primary admin user:kasiviswanadhamchalla@gmail.com ) / Hackathon@123");
     }
 }

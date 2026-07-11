@@ -11,14 +11,14 @@ const OverrideConsole = () => {
   const [selectedClaim, setSelectedClaim] = useState(null);
   const [overrideComment, setOverrideComment] = useState('');
 
-  const fetchFlaggedClaims = () => {
-    const allClaims = mockDb.getClaims();
+  const fetchFlaggedClaims = async () => {
+    const allClaims = await mockDb.getClaims();
     const flagged = allClaims.filter(c => c.status === 'FLAGGED_FOR_REVIEW');
     setClaims(flagged);
-    if (flagged.length > 0 && !selectedClaimId) {
+    if (flagged.length > 0) {
       setSelectedClaimId(flagged[0].id);
       setSelectedClaim(flagged[0]);
-    } else if (flagged.length === 0) {
+    } else {
       setSelectedClaimId('');
       setSelectedClaim(null);
     }
@@ -34,7 +34,7 @@ const OverrideConsole = () => {
     setSelectedClaim(claims.find(c => c.id === id));
   };
 
-  const handleOverrideSubmit = (e) => {
+  const handleOverrideSubmit = async (e) => {
     e.preventDefault();
     if (!selectedClaim) return;
     if (!overrideComment.trim()) {
@@ -43,44 +43,25 @@ const OverrideConsole = () => {
     }
 
     try {
-      // Perform override in local database
-      const allClaims = mockDb.getClaims();
-      const claimIndex = allClaims.findIndex(c => c.id === selectedClaim.id);
+      const cleanClaimId = selectedClaim.id.replace('CLM-', '');
+      const tasksList = await mockDb.getTasks();
+      const task = tasksList.find(t => t.claimId.replace('CLM-', '') === cleanClaimId);
       
-      if (claimIndex > -1) {
-        // Change status to PENDING_REVIEW (Standard review queue)
-        allClaims[claimIndex].status = 'PENDING_REVIEW';
-        allClaims[claimIndex].fraudRiskScore = 15; // reset risk
-        allClaims[claimIndex].fraudFlags = []; // clear flags
-        allClaims[claimIndex].history.push({
-          status: 'PENDING_REVIEW',
-          updatedAt: new Date().toISOString(),
-          updatedBy: user.name,
-          comment: `MANAGER OVERRIDE TRIGGERED. Rationale: ${overrideComment}`
-        });
-
-        mockDb.saveClaims(allClaims);
-
-        // Update corresponding task if exists to standard role
-        const tasks = mockDb.getTasks();
-        const taskIndex = tasks.findIndex(t => t.claimId === selectedClaim.id);
-        if (taskIndex > -1) {
-          tasks[taskIndex].assignedRole = 'CLAIM_OFFICER';
-          tasks[taskIndex].title = `Auto Collision Claim Review (${selectedClaim.id})`;
-          tasks[taskIndex].description = `Post-override standard review. Requested Payout: ${selectedClaim.claimAmount}`;
-          mockDb.saveTasks(tasks);
+      if (task) {
+        if (task.status !== 'CLAIMED' || task.assignedUser !== user.username) {
+          try {
+            await mockDb.claimTask(task.id, user);
+          } catch(err) {}
         }
-
-        // Auditing
-        mockDb.addAuditLog(user.id, user.username, selectedClaim.id, 'OVERRIDE_RULES', `Manager override applied. Flags cleared. Comment: ${overrideComment}`);
-        
-        toast.success(`Override successful! Claim ${selectedClaim.id} cleared and routed to general processor queue.`);
-        
-        // Reset state
-        setOverrideComment('');
-        setSelectedClaimId('');
-        fetchFlaggedClaims();
+        await mockDb.processClaim(task.id, 'APPROVE', `MANAGER OVERRIDE APPROVED. Rationale: ${overrideComment}`, user);
+        toast.success(`Override successful! Claim ${selectedClaim.id} approved directly by manager.`);
+      } else {
+        toast.error('No active task found for this claim.');
       }
+      
+      setOverrideComment('');
+      setSelectedClaimId('');
+      await fetchFlaggedClaims();
     } catch (error) {
       toast.error('Failed to perform rule override.');
     }
@@ -116,7 +97,7 @@ const OverrideConsole = () => {
               >
                 {claims.map((c) => (
                   <option key={c.id} value={c.id}>
-                    {c.id} - {c.customerName} ({c.claimAmount.toFixed(2)}) - Risk: {c.fraudRiskScore}
+                    {c.id} - {c.customerName} ({(c.claimAmount || 0).toFixed(2)}) - Risk: {c.fraudRiskScore}
                   </option>
                 ))}
               </select>

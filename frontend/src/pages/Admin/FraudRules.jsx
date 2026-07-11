@@ -17,13 +17,13 @@ const FraudRules = () => {
     setSettings({ ...settings, [key]: parseInt(value) });
   };
 
-  const handleSave = (e) => {
+  const handleSave = async (e) => {
     e.preventDefault();
     if (!settings) return;
 
     try {
       mockDb.saveSettings(settings);
-      mockDb.addAuditLog(user.id, user.username, null, 'UPDATE_FRAUD_SETTINGS', `Fraud rules parameters modified. Threshold: ${settings.fraudThreshold}. High-Value Cap: $${settings.highValueThreshold}.`);
+      await mockDb.addAuditLog(user.id, user.username, null, 'UPDATE_FRAUD_SETTINGS', `Fraud rules parameters modified. Threshold: ${settings.fraudThreshold}. High-Value Cap: $${settings.highValueThreshold}.`);
       toast.success('Fraud rules parameters updated and loaded into Redis cache.');
     } catch (e) {
       toast.error('Failed to save settings.');

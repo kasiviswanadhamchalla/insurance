@@ -12,24 +12,27 @@ const ApprovalHistory = () => {
   });
 
   useEffect(() => {
-    const allClaims = mockDb.getClaims();
-    const resolved = allClaims.filter(c => ['APPROVED', 'REJECTED'].includes(c.status));
-    
-    setResolvedClaims(resolved);
+    const fetchHistory = async () => {
+      const allClaims = await mockDb.getClaims();
+      const resolved = allClaims.filter(c => ['APPROVED', 'REJECTED'].includes(c.status));
+      
+      setResolvedClaims(resolved);
 
-    // Calculate metrics
-    const approved = resolved.filter(c => c.status === 'APPROVED');
-    const totalPayout = approved.reduce((sum, c) => sum + c.claimAmount, 0);
-    const approvedCount = approved.length;
-    const rejectedCount = resolved.filter(c => c.status === 'REJECTED').length;
-    const approvalRate = resolved.length > 0 ? Math.round((approvedCount / resolved.length) * 100) : 0;
+      // Calculate metrics
+      const approved = resolved.filter(c => c.status === 'APPROVED');
+      const totalPayout = approved.reduce((sum, c) => sum + (c.claimAmount || 0), 0);
+      const approvedCount = approved.length;
+      const rejectedCount = resolved.filter(c => c.status === 'REJECTED').length;
+      const approvalRate = resolved.length > 0 ? Math.round((approvedCount / resolved.length) * 100) : 0;
 
-    setMetrics({
-      totalPayout,
-      approvalRate,
-      approvedCount,
-      rejectedCount
-    });
+      setMetrics({
+        totalPayout,
+        approvalRate,
+        approvedCount,
+        rejectedCount
+      });
+    };
+    fetchHistory();
   }, []);
 
   const getResolverName = (claim) => {
@@ -122,7 +125,7 @@ const ApprovalHistory = () => {
                   <tr key={c.id} className="hover:bg-slate-800/30 transition-all">
                     <td className="px-6 py-4 font-semibold text-teal-400">{c.id}</td>
                     <td className="px-6 py-4">{c.customerName}</td>
-                    <td className="px-6 py-4 font-semibold text-slate-200">{c.claimAmount.toFixed(2)}</td>
+                    <td className="px-6 py-4 font-semibold text-slate-200">{(c.claimAmount || 0).toFixed(2)}</td>
                     <td className="px-6 py-4">
                       <span className={`px-2 py-0.5 rounded text-[10px] font-semibold border ${
                         c.status === 'APPROVED'

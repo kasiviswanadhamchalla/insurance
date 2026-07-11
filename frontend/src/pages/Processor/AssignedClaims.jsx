@@ -9,11 +9,14 @@ const AssignedClaims = () => {
   const [tasks, setTasks] = useState([]);
 
   useEffect(() => {
-    if (user) {
-      const allTasks = mockDb.getTasks();
-      // Filter tasks assigned/claimed by the current logged-in processor user
-      setTasks(allTasks.filter(t => t.assignedUser === user.name && ['PENDING', 'IN_PROGRESS', 'PENDING_DOCS'].includes(t.status)));
-    }
+    const fetchTasks = async () => {
+      if (user) {
+        const allTasks = await mockDb.getTasks();
+        // Filter tasks assigned/claimed by the current logged-in processor user
+        setTasks(allTasks.filter(t => t.assignedUser === user.username && ['PENDING', 'IN_PROGRESS', 'PENDING_DOCS'].includes(t.status || 'PENDING')));
+      }
+    };
+    fetchTasks();
   }, [user]);
 
   return (

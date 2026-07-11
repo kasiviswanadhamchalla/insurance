@@ -24,52 +24,55 @@ const Dashboard = () => {
 
   useEffect(() => {
     // Load fresh data
-    const allClaims = mockDb.getClaims();
-    const allTasks = mockDb.getTasks();
-    const allLogs = mockDb.getAuditLogs();
-    
-    setClaims(allClaims);
-    setTasks(allTasks);
-    setLogs(allLogs);
+    const loadFreshData = async () => {
+      const allClaims = await mockDb.getClaims();
+      const allTasks = await mockDb.getTasks();
+      const allLogs = await mockDb.getAuditLogs();
+      
+      setClaims(allClaims);
+      setTasks(allTasks);
+      setLogs(allLogs);
 
-    // Calculate generic stats
-    if (user?.role === 'CUSTOMER') {
-      const myClaims = allClaims.filter(c => c.customerId === user.id);
-      setStats({
-        total: myClaims.length,
-        pending: myClaims.filter(c => ['SUBMITTED', 'PENDING_REVIEW', 'FLAGGED_FOR_REVIEW', 'PENDING_DOCUMENTATION'].includes(c.status)).length,
-        approved: myClaims.filter(c => c.status === 'APPROVED').length,
-        rejected: myClaims.filter(c => c.status === 'REJECTED').length,
-      });
-    } else if (user?.role === 'CLAIM_OFFICER') {
-      setStats({
-        queue: allTasks.filter(t => t.assignedRole === 'CLAIM_OFFICER' && !t.assignedUser).length,
-        myClaims: allClaims.filter(c => c.history.some(h => h.updatedBy === user.name) && c.status === 'PENDING_REVIEW').length,
-        resolved: allClaims.filter(c => c.history.some(h => h.updatedBy === user.name) && ['APPROVED', 'REJECTED'].includes(c.status)).length,
-      });
-    } else if (user?.role === 'CLAIM_MANAGER' || user?.role === 'FRAUD_DETECTION_MANAGER') {
-      setStats({
-        escalated: allClaims.filter(c => c.status === 'FLAGGED_FOR_REVIEW').length,
-        highValue: allClaims.filter(c => c.claimAmount >= 5000).length,
-        pendingAction: allTasks.filter(t => t.assignedRole === 'CLAIM_MANAGER' || t.assignedRole === 'FRAUD_DETECTION_MANAGER').length,
-      });
-    } else if (user?.role === 'AUDITOR') {
-      setStats({
-        totalLogs: allLogs.length,
-        criticalActions: allLogs.filter(l => ['APPROVE_CLAIM', 'REJECT_CLAIM', 'MFA_FAILED'].includes(l.action)).length,
-        userLogins: allLogs.filter(l => l.action === 'USER_LOGIN').length,
-      });
-    } else if (user?.role === 'SYSTEM_ADMIN') {
-      const users = mockDb.getUsers();
-      const settings = mockDb.getSettings();
-      setStats({
-        totalUsers: users.length,
-        fraudThreshold: settings.fraudThreshold,
-        highValueThreshold: settings.highValueThreshold,
-        activeSessions: Math.floor(Math.random() * 5) + 3,
-        systemHealth: '100% Operational'
-      });
-    }
+      // Calculate generic stats
+      if (user?.role === 'CUSTOMER') {
+        const myClaims = allClaims.filter(c => c.customerId === user.email || c.customerId === user.username);
+        setStats({
+          total: myClaims.length,
+          pending: myClaims.filter(c => ['SUBMITTED', 'PENDING_REVIEW', 'FLAGGED_FOR_REVIEW', 'PENDING_DOCUMENTATION'].includes(c.status)).length,
+          approved: myClaims.filter(c => c.status === 'APPROVED').length,
+          rejected: myClaims.filter(c => c.status === 'REJECTED').length,
+        });
+      } else if (user?.role === 'CLAIM_OFFICER') {
+        setStats({
+          queue: allTasks.filter(t => t.assignedRole === 'CLAIM_OFFICER' && !t.assignedUser).length,
+          myClaims: allClaims.filter(c => c.history.some(h => h.updatedBy === user.name) && c.status === 'PENDING_REVIEW').length,
+          resolved: allClaims.filter(c => c.history.some(h => h.updatedBy === user.name) && ['APPROVED', 'REJECTED'].includes(c.status)).length,
+        });
+      } else if (user?.role === 'CLAIM_MANAGER' || user?.role === 'FRAUD_DETECTION_MANAGER') {
+        setStats({
+          escalated: allClaims.filter(c => c.status === 'FLAGGED_FOR_REVIEW').length,
+          highValue: allClaims.filter(c => c.claimAmount >= 5000).length,
+          pendingAction: allTasks.filter(t => t.assignedRole === 'CLAIM_MANAGER' || t.assignedRole === 'FRAUD_DETECTION_MANAGER').length,
+        });
+      } else if (user?.role === 'AUDITOR') {
+        setStats({
+          totalLogs: allLogs.length,
+          criticalActions: allLogs.filter(l => ['APPROVE_CLAIM', 'REJECT_CLAIM', 'MFA_FAILED'].includes(l.action)).length,
+          userLogins: allLogs.filter(l => l.action === 'USER_LOGIN').length,
+        });
+      } else if (user?.role === 'SYSTEM_ADMIN') {
+        const users = await mockDb.getUsers();
+        const settings = mockDb.getSettings();
+        setStats({
+          totalUsers: users.length,
+          fraudThreshold: settings.fraudThreshold,
+          highValueThreshold: settings.highValueThreshold,
+          activeSessions: Math.floor(Math.random() * 5) + 3,
+          systemHealth: '100% Operational'
+        });
+      }
+    };
+    loadFreshData();
   }, [user]);
 
   const getStatusBadge = (status) => {
@@ -91,14 +94,14 @@ const Dashboard = () => {
 
   // Render Customer Dashboard
   const renderCustomerDashboard = () => {
-    const myClaims = claims.filter(c => c.customerId === user.id);
+    const myClaims = claims.filter(c => c.customerId === user.email || c.customerId === user.username);
     return (
       <div className="space-y-8 animate-fadeIn">
         {/* Header Widget */}
-        <div className="p-6 bg-gradient-to-r from-teal-900/60 to-slate-900 border border-teal-800/40 rounded-3xl flex justify-between items-center shadow-xl">
+        <div className="p-6 bg-gradient-to-r from-teal-50 to-emerald-50 border border-teal-200/60 rounded-3xl flex justify-between items-center shadow-md">
           <div>
-            <h2 className="text-lg font-bold text-slate-100">Welcome to your Claims Portal</h2>
-            <p className="text-slate-400 text-sm mt-1">Submit claims, upload receipts, and check processing in real time.</p>
+            <h2 className="text-lg font-bold text-teal-950">Welcome to your Claims Portal</h2>
+            <p className="text-teal-900/80 text-sm mt-1">Submit claims, upload receipts, and check processing in real time.</p>
           </div>
           <Link
             to="/claims/new"
@@ -266,9 +269,9 @@ const Dashboard = () => {
                       </td>
                       <td className="px-6 py-4 text-right">
                         <button
-                          onClick={() => {
+                          onClick={async () => {
                             // Find corresponding task ID
-                            const tasksList = mockDb.getTasks();
+                            const tasksList = await mockDb.getTasks();
                             const task = tasksList.find(t => t.claimId === c.id);
                             if (task) navigate(`/processor/tasks/${task.id}`);
                           }}
@@ -358,8 +361,8 @@ const Dashboard = () => {
                       </td>
                       <td className="px-6 py-4 text-right">
                         <button
-                          onClick={() => {
-                            const tasksList = mockDb.getTasks();
+                          onClick={async () => {
+                            const tasksList = await mockDb.getTasks();
                             const task = tasksList.find(t => t.claimId === c.id);
                             if (task) navigate(`/processor/tasks/${task.id}`);
                           }}
