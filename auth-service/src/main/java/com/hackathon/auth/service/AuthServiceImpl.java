@@ -31,6 +31,9 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
+import org.springframework.mail.SimpleMailMessage;
+import org.springframework.mail.javamail.JavaMailSender;
+
 @Service
 @Transactional
 public class AuthServiceImpl implements AuthService {
@@ -44,6 +47,7 @@ public class AuthServiceImpl implements AuthService {
     private final JwtUtils jwtUtils;
     private final UserMapper userMapper;
     private final KafkaTemplate<String, Object> kafkaTemplate;
+    private final JavaMailSender mailSender;
 
     public AuthServiceImpl(UserRepository userRepository,
                             RoleRepository roleRepository,
@@ -51,7 +55,8 @@ public class AuthServiceImpl implements AuthService {
                             PasswordEncoder passwordEncoder,
                             JwtUtils jwtUtils,
                             UserMapper userMapper,
-                            KafkaTemplate<String, Object> kafkaTemplate) {
+                            KafkaTemplate<String, Object> kafkaTemplate,
+                            JavaMailSender mailSender) {
         this.userRepository = userRepository;
         this.roleRepository = roleRepository;
         this.refreshTokenRepository = refreshTokenRepository;
@@ -59,6 +64,7 @@ public class AuthServiceImpl implements AuthService {
         this.jwtUtils = jwtUtils;
         this.userMapper = userMapper;
         this.kafkaTemplate = kafkaTemplate;
+        this.mailSender = mailSender;
     }
 
     @Override
@@ -124,6 +130,9 @@ public class AuthServiceImpl implements AuthService {
             user.setMfaSecret(transactionId); // Store transactionId in mfaSecret for lookup
             user.setMfaOtpExpiry(Instant.now().plus(5, ChronoUnit.MINUTES));
             userRepository.save(user);
+
+            // Send SMTP Email for MFA verification code
+            sendMfaEmail(user.getEmail(), otp);
 
             // Publish MFA Event to Kafka
             MfaEvent mfaEvent = MfaEvent.builder()
@@ -305,5 +314,18 @@ public class AuthServiceImpl implements AuthService {
         user.setEnabled(true);
         userRepository.save(user);
         log.info("User ID {} ({}) approved by Admin", userId, user.getUsername());
+    }
+
+    private void sendMfaEmail(String email, String otp) {
+        try {
+            SimpleMailMessage message = new SimpleMailMessage();
+            message.setTo(email);
+            message.setSubject("ClaimFlow - Two-Step Verification OTP");
+            message.setText("Hello,\n\nYour ClaimFlow verification code is: " + otp + "\n\nThis code will expire in 5 minutes.\n\nSecurely,\nClaimFlow Security Team");
+            mailSender.send(message);
+            log.info("MFA SMTP Email sent successfully to {}", email);
+        } catch (Exception e) {
+            log.error("Failed to send MFA SMTP Email to {}: {}", email, e.getMessage());
+        }
     }
 }

@@ -46,7 +46,7 @@ const Monitoring = () => {
         <div>
           <h1 className="text-3xl font-extrabold text-slate-100 uppercase tracking-tight">System Monitoring</h1>
           <p className="text-slate-400 text-sm mt-1">
-            Telemetry reports pulled from Spring Boot Actuator and Prometheus server.
+            System operations telemetry reports and server metrics.
           </p>
         </div>
         <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-emerald-950/60 text-emerald-450 border border-emerald-900 text-xs font-semibold uppercase tracking-wider">
@@ -115,83 +115,6 @@ const Monitoring = () => {
             <span className="text-3xl font-extrabold text-emerald-400 block">0 ms</span>
             <div className="w-full h-1.5 bg-slate-900 rounded-full overflow-hidden mt-2">
               <div className="h-full bg-emerald-500" style={{ width: '5%' }}></div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        {/* Hikari Connection Pool metrics */}
-        <div className="bg-[#0f172a]/70 border border-slate-800 p-6 rounded-3xl shadow-xl space-y-4">
-          <h3 className="font-semibold text-slate-200 text-lg border-b border-slate-850 pb-3 flex items-center gap-2">
-            <DiskIcon className="text-indigo-400" /> Hikari Pool Metadata
-          </h3>
-          <div className="space-y-3 text-xs">
-            <div className="flex justify-between py-1 border-b border-slate-850/60">
-              <span className="text-slate-400">Pool Name</span>
-              <span className="font-mono text-slate-200 font-semibold">HikariPool-1</span>
-            </div>
-            <div className="flex justify-between py-1 border-b border-slate-850/60">
-              <span className="text-slate-400">Idle Connections</span>
-              <span className="font-mono text-slate-200 font-semibold">{50 - metrics.dbPool}</span>
-            </div>
-            <div className="flex justify-between py-1 border-b border-slate-850/60">
-              <span className="text-slate-400">Pending Requests Threads</span>
-              <span className="font-mono text-emerald-400 font-semibold">0</span>
-            </div>
-            <div className="flex justify-between py-1">
-              <span className="text-slate-400">Connection Timeout</span>
-              <span className="font-mono text-slate-200 font-semibold">30,000 ms</span>
-            </div>
-          </div>
-        </div>
-
-        {/* MongoDB GridFS details */}
-        <div className="bg-[#0f172a]/70 border border-slate-800 p-6 rounded-3xl shadow-xl space-y-4">
-          <h3 className="font-semibold text-slate-200 text-lg border-b border-slate-850 pb-3 flex items-center gap-2">
-            <RamIcon className="text-teal-400" /> NoSQL Document Engine (GridFS)
-          </h3>
-          <div className="space-y-3 text-xs">
-            <div className="flex justify-between py-1 border-b border-slate-850/60">
-              <span className="text-slate-400">Active Storage Buckets</span>
-              <span className="font-semibold text-slate-200">claims_attachments</span>
-            </div>
-            <div className="flex justify-between py-1 border-b border-slate-850/60">
-              <span className="text-slate-400">Total Chunk Count</span>
-              <span className="font-semibold text-slate-200">128 chunks</span>
-            </div>
-            <div className="flex justify-between py-1 border-b border-slate-850/60">
-              <span className="text-slate-400">Index Allocation</span>
-              <span className="font-semibold text-slate-200">24.5 KB</span>
-            </div>
-            <div className="flex justify-between py-1">
-              <span className="text-slate-400">Database Sockets Status</span>
-              <span className="text-emerald-400 font-semibold font-mono uppercase">ONLINE</span>
-            </div>
-          </div>
-        </div>
-
-        {/* Kafka metrics */}
-        <div className="bg-[#0f172a]/70 border border-slate-800 p-6 rounded-3xl shadow-xl space-y-4">
-          <h3 className="font-semibold text-slate-200 text-lg border-b border-slate-850 pb-3 flex items-center gap-2">
-            <MonitorIcon className="text-orange-400" /> Messaging Cluster (Kafka)
-          </h3>
-          <div className="space-y-3 text-xs">
-            <div className="flex justify-between py-1 border-b border-slate-850/60">
-              <span className="text-slate-400">Topics Tracked</span>
-              <span className="font-semibold text-slate-200">claim-submissions, mfa-events</span>
-            </div>
-            <div className="flex justify-between py-1 border-b border-slate-850/60">
-              <span className="text-slate-400">Active Brokers Count</span>
-              <span className="font-semibold text-slate-200">3 Brokers (Cluster mode)</span>
-            </div>
-            <div className="flex justify-between py-1 border-b border-slate-850/60">
-              <span className="text-slate-400">Partitions Assigned</span>
-              <span className="font-semibold text-slate-200">12 partitions</span>
-            </div>
-            <div className="flex justify-between py-1">
-              <span className="text-slate-400">Zookeeper Cluster ping</span>
-              <span className="text-emerald-400 font-semibold font-mono uppercase">CONNECTED</span>
             </div>
           </div>
         </div>

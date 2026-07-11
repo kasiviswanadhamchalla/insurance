@@ -34,8 +34,34 @@ public class ClaimServiceImpl implements ClaimService {
         this.documentClient = documentClient;
     }
 
+    private boolean isWithinSevenBusinessDays(Instant incidentInstant) {
+        if (incidentInstant == null) return false;
+        
+        java.time.LocalDate incidentDate = java.time.LocalDate.ofInstant(incidentInstant, java.time.ZoneId.systemDefault());
+        java.time.LocalDate today = java.time.LocalDate.now(java.time.ZoneId.systemDefault());
+        
+        if (incidentDate.isAfter(today)) {
+            return false;
+        }
+        
+        long businessDays = 0;
+        java.time.LocalDate temp = incidentDate;
+        while (temp.isBefore(today)) {
+            temp = temp.plusDays(1);
+            java.time.DayOfWeek day = temp.getDayOfWeek();
+            if (day != java.time.DayOfWeek.SATURDAY && day != java.time.DayOfWeek.SUNDAY) {
+                businessDays++;
+            }
+        }
+        
+        return businessDays <= 7;
+    }
+
     @Override
     public Claim createClaimDraft(String username, Claim claim) {
+        if (!isWithinSevenBusinessDays(claim.getDateOfOccurrence())) {
+            throw new BadRequestException("Claims must be submitted within 7 business days of the occurrence date.");
+        }
         claim.setUsername(username);
         claim.setStatus(ClaimStatus.DRAFT);
         return claimRepository.save(claim);
@@ -52,6 +78,10 @@ public class ClaimServiceImpl implements ClaimService {
 
         if (claim.getStatus() != ClaimStatus.DRAFT) {
             throw new BadRequestException("Claim is already submitted or processed");
+        }
+
+        if (!isWithinSevenBusinessDays(claim.getDateOfOccurrence())) {
+            throw new BadRequestException("Claims must be submitted within 7 business days of the occurrence date.");
         }
 
         // Verify that the claim has uploaded documents via OpenFeign

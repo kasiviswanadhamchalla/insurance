@@ -27,21 +27,24 @@ const ReviewClaim = () => {
   const [claim, setClaim] = useState(null);
 
   useEffect(() => {
-    const allTasks = mockDb.getTasks();
-    const foundTask = allTasks.find(t => t.id === taskId);
-    if (foundTask) {
-      setTask(foundTask);
-      const allClaims = mockDb.getClaims();
-      const foundClaim = allClaims.find(c => c.id === foundTask.claimId);
-      setClaim(foundClaim);
-    }
+    const loadTaskAndClaim = async () => {
+      const allTasks = await mockDb.getTasks();
+      const foundTask = allTasks.find(t => t.id === taskId);
+      if (foundTask) {
+        setTask(foundTask);
+        const allClaims = await mockDb.getClaims();
+        const foundClaim = allClaims.find(c => c.id === foundTask.claimId);
+        setClaim(foundClaim);
+      }
+    };
+    loadTaskAndClaim();
   }, [taskId]);
 
   const handleDownload = (docName) => {
     toast.info(`[GridFS Download] Fetching binary for ${docName} from MongoDB chunks...`);
   };
 
-  const handleDecisionSubmit = (values, { setSubmitting }) => {
+  const handleDecisionSubmit = async (values, { setSubmitting }) => {
     try {
       const isManager = user.role === 'CLAIM_MANAGER' || user.role === 'FRAUD_DETECTION_MANAGER';
       const isTaskForManager = task.assignedRole === 'CLAIM_MANAGER' || task.assignedRole === 'FRAUD_DETECTION_MANAGER';
@@ -51,7 +54,7 @@ const ReviewClaim = () => {
         return;
       }
 
-      mockDb.processClaim(task.id, values.action, values.comment, user);
+      await mockDb.processClaim(task.id, values.action, values.comment, user);
       
       if (values.action === 'APPROVE') {
         toast.success('Decision recorded. Claim approved and payout initiated.');
@@ -73,7 +76,7 @@ const ReviewClaim = () => {
     return <div className="text-center py-12">Task details not found.</div>;
   }
 
-  const isLocked = task.assignedUser === user.name;
+  const isLocked = task.assignedUser === user.username;
   const isManagerTask = task.assignedRole === 'CLAIM_MANAGER' || task.assignedRole === 'FRAUD_DETECTION_MANAGER';
   const hasAccess = !isManagerTask || user.role === 'CLAIM_MANAGER' || user.role === 'FRAUD_DETECTION_MANAGER';
 
@@ -130,7 +133,7 @@ const ReviewClaim = () => {
               </div>
               <div>
                 <span className="text-slate-500 block mb-0.5">Requested Payout</span>
-                <span className="font-extrabold text-teal-400 text-base">{claim.claimAmount.toFixed(2)}</span>
+                <span className="font-extrabold text-teal-400 text-base">{(claim.claimAmount || 0).toFixed(2)}</span>
               </div>
               <div>
                 <span className="text-slate-500 block mb-0.5">Loss Category</span>
@@ -219,10 +222,14 @@ const ReviewClaim = () => {
                 <div className="p-4 bg-slate-900/50 rounded-2xl border border-slate-800 text-center text-xs text-slate-400 space-y-2">
                   <span>To record decisions on this task, lock it to your working folder.</span>
                   <button
-                    onClick={() => {
-                      mockDb.claimTask(task.id, user);
-                      setTask({ ...task, assignedUser: user.name, status: 'IN_PROGRESS' });
-                      toast.success('Task claimed and workstation unlocked.');
+                    onClick={async () => {
+                      try {
+                        await mockDb.claimTask(task.id, user);
+                        setTask({ ...task, assignedUser: user.username, status: 'CLAIMED' });
+                        toast.success('Task claimed and workstation unlocked.');
+                      } catch (err) {
+                        toast.error('Failed to claim task.');
+                      }
                     }}
                     className="w-full bg-teal-600 hover:bg-teal-500 text-white font-semibold py-2 rounded-xl text-xs transition-all mt-2 shadow-md"
                   >

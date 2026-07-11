@@ -1,56 +1,16 @@
-// Backend API data adapter mapping local mockDb calls to the real microservices.
-// This removes all dummy data and connects the frontend directly to the backend.
+import api from './api';
 
-const syncRequest = (method, url, body = null) => {
-  const xhr = new XMLHttpRequest();
-  xhr.open(method, `http://localhost:8080${url}`, false); // false makes it synchronous
-  
-  // Attach token
-  const token = localStorage.getItem('ins_token');
-  if (token) {
-    xhr.setRequestHeader('Authorization', `Bearer ${token}`);
-  }
-  
-  // Attach gateway user headers
-  const userStr = localStorage.getItem('ins_current_user');
-  if (userStr) {
-    try {
-      const u = JSON.parse(userStr);
-      xhr.setRequestHeader('X-User-Name', u.email || u.username);
-      
-      let beRole = 'ROLE_USER';
-      if (u.role === 'SYSTEM_ADMIN') beRole = 'ROLE_ADMIN';
-      else if (u.role === 'CLAIM_OFFICER') beRole = 'ROLE_PROCESSOR';
-      else if (u.role === 'CLAIM_MANAGER') beRole = 'ROLE_MANAGER';
-      else if (u.role === 'AUDITOR') beRole = 'ROLE_AUDITOR';
-      xhr.setRequestHeader('X-User-Roles', beRole);
-    } catch(e) {}
-  }
-  
-  xhr.setRequestHeader('Content-Type', 'application/json');
-  xhr.send(body ? JSON.stringify(body) : null);
-  
-  if (xhr.status >= 200 && xhr.status < 300) {
-    try {
-      return JSON.parse(xhr.responseText);
-    } catch(e) {
-      return xhr.responseText;
-    }
-  } else {
-    throw new Error(`Backend request failed with status: ${xhr.status}`);
-  }
-};
-
-const mapClaim = (c) => {
+const mapClaim = async (c) => {
   // Fetch documents for this claim
   let documents = [];
   try {
-    const docsRes = syncRequest('GET', `/claims/${c.id}/documents`);
-    documents = (docsRes.data || []).map(d => ({
+    const docsRes = await api.get(`/claims/${c.id}/documents`);
+    const docsData = docsRes.data.data || docsRes.data || [];
+    documents = docsData.map(d => ({
       id: d.id ? d.id.toString() : d.documentId,
       name: d.fileName,
       category: d.category,
-      size: `${(d.fileSize / 1024).toFixed(1)}KB`,
+      size: d.fileSize ? `${(d.fileSize / 1024).toFixed(1)}KB` : '0KB',
       uploadedAt: d.uploadedAt
     }));
   } catch (e) {}
@@ -59,10 +19,11 @@ const mapClaim = (c) => {
   let fraudRiskScore = 0;
   let fraudFlags = [];
   try {
-    const fraudRes = syncRequest('GET', `/fraud/reports/${c.id}`);
-    if (fraudRes.data) {
-      fraudRiskScore = fraudRes.data.riskScore || 0;
-      fraudFlags = fraudRes.data.flags || [];
+    const fraudRes = await api.get(`/fraud/reports/${c.id}`);
+    const fraudData = fraudRes.data.data || fraudRes.data;
+    if (fraudData) {
+      fraudRiskScore = fraudData.riskScore || 0;
+      fraudFlags = typeof fraudData.flags === 'string' ? fraudData.flags.split(',') : (fraudData.flags || []);
     }
   } catch (e) {}
 
@@ -93,10 +54,11 @@ export const initMockDb = () => {
 
 export const mockDb = {
   // Users mapping for Admin Dashboard
-  getUsers: () => {
+  getUsers: async () => {
     try {
-      const res = syncRequest('GET', '/auth/users');
-      return (res.data || []).map(u => {
+      const res = await api.get('/auth/users');
+      const list = res.data.data || res.data || [];
+      return list.map(u => {
         let feRole = 'CUSTOMER';
         if (u.roles && u.roles.length > 0) {
           const beRole = u.roles[0];
@@ -119,49 +81,47 @@ export const mockDb = {
       return [];
     }
   },
-  saveUsers: (users) => {
-    users.forEach(u => {
+  saveUsers: async (users) => {
+    for (const u of users) {
       if (u.approved) {
         try {
-          syncRequest('POST', `/auth/users/${u.id}/approve`);
+          await api.post(`/auth/users/${u.id}/approve`);
         } catch(e) {}
       }
-    });
+    }
   },
   
   // Claims
-  getClaims: () => {
+  getClaims: async () => {
     const userStr = localStorage.getItem('ins_current_user');
     if (!userStr) return [];
     try {
       const u = JSON.parse(userStr);
       let res;
       if (u.role === 'CUSTOMER') {
-        res = syncRequest('GET', '/claims?size=100');
+        res = await api.get('/claims?size=100');
       } else {
-        res = syncRequest('GET', '/claims/all?size=100');
+        res = await api.get('/claims/all?size=100');
       }
-      const content = res.data?.content || res.data || [];
-      return content.map(mapClaim);
+      const data = res.data.data || res.data;
+      const content = data.content || data || [];
+      return await Promise.all(content.map(mapClaim));
     } catch(e) {
       return [];
     }
   },
-  saveClaims: (claims) => {
+  saveClaims: async (claims) => {
     // Status updates are handled directly on the backend via processClaim (action)
   },
   
   // Tasks (Workflow Queue)
-  getTasks: () => {
+  getTasks: async () => {
     const userStr = localStorage.getItem('ins_current_user');
     if (!userStr) return [];
     try {
-      const u = JSON.parse(userStr);
-      let rolesHeader = 'ROLE_PROCESSOR';
-      if (u.role === 'CLAIM_MANAGER') rolesHeader = 'ROLE_MANAGER';
-      
-      const res = syncRequest('GET', '/tasks/pending?size=100');
-      const content = res.data?.content || res.data || [];
+      const res = await api.get('/tasks/pending?size=100');
+      const data = res.data.data || res.data;
+      const content = data.content || data || [];
       
       return content.map(t => ({
         id: t.id.toString(),
@@ -177,15 +137,16 @@ export const mockDb = {
       return [];
     }
   },
-  saveTasks: (tasks) => {
+  saveTasks: async (tasks) => {
     // Tasks status transitions are managed by the workflow-service state machine
   },
   
   // Audit Logs
-  getAuditLogs: () => {
+  getAuditLogs: async () => {
     try {
-      const res = syncRequest('GET', '/audit/logs?size=100');
-      const content = res.data?.content || res.data || [];
+      const res = await api.get('/audit/logs?size=100');
+      const data = res.data.data || res.data;
+      const content = data.content || data || [];
       return content.map(log => ({
         id: `LOG-${log.id}`,
         timestamp: log.timestamp,
@@ -199,7 +160,7 @@ export const mockDb = {
       return [];
     }
   },
-  saveAuditLogs: (logs) => {
+  saveAuditLogs: async (logs) => {
     // Auto-logged on the backend services
   },
 
@@ -221,11 +182,11 @@ export const mockDb = {
   },
 
   // Operations
-  addAuditLog: (userId, username, claimId, action, details) => {
+  addAuditLog: async (userId, username, claimId, action, details) => {
     // Handled automatically on the backend
   },
 
-  submitClaim: (claimData, user) => {
+  submitClaim: async (claimData, user) => {
     const payload = {
       policyNumber: claimData.policyNumber,
       claimAmount: parseFloat(claimData.claimAmount),
@@ -235,72 +196,68 @@ export const mockDb = {
     };
     
     // 1. Create claim draft
-    const draftRes = syncRequest('POST', '/claims', payload);
-    const claimId = draftRes.data.id;
+    const draftRes = await api.post('/claims', payload);
+    const draftData = draftRes.data.data || draftRes.data;
+    const claimId = draftData.id;
     
     // 2. Upload attachments
     if (claimData.documents && claimData.documents.length > 0) {
-      claimData.documents.forEach(doc => {
-        try {
-          const formData = new FormData();
-          const blob = new Blob(['Dummy file stream contents'], { type: 'application/pdf' });
-          formData.append('file', blob, doc.name || 'attachment.pdf');
-          formData.append('category', doc.category || 'receipt');
-          
-          const xhr = new XMLHttpRequest();
-          xhr.open('POST', `http://localhost:8080/claims/${claimId}/documents`, false);
-          const token = localStorage.getItem('ins_token');
-          if (token) xhr.setRequestHeader('Authorization', `Bearer ${token}`);
-          xhr.setRequestHeader('X-User-Name', user.email || user.username);
-          xhr.setRequestHeader('X-User-Roles', 'ROLE_USER');
-          xhr.send(formData);
-        } catch(e) {
-          console.error("Failed to upload document synchronously", e);
+      for (const doc of claimData.documents) {
+        if (doc.file) {
+          try {
+            const formData = new FormData();
+            formData.append('file', doc.file);
+            formData.append('category', doc.category || 'receipt');
+            
+            await api.post(`/claims/${claimId}/documents`, formData, {
+              headers: {
+                'Content-Type': 'multipart/form-data'
+              }
+            });
+          } catch(e) {
+            console.error("Failed to upload document", e);
+          }
         }
-      });
+      }
     }
     
     // 3. Submit claim
-    const submitRes = syncRequest('POST', `/claims/${claimId}/submit`);
-    return mapClaim(submitRes.data);
+    const submitRes = await api.post(`/claims/${claimId}/submit`);
+    const submitData = submitRes.data.data || submitRes.data;
+    return await mapClaim(submitData);
   },
 
-  claimTask: (taskId, user) => {
-    syncRequest('POST', `/tasks/${taskId}/claim`);
+  claimTask: async (taskId, user) => {
+    await api.post(`/tasks/${taskId}/claim`);
   },
 
-  processClaim: (taskId, action, comment, user) => {
+  processClaim: async (taskId, action, comment, user) => {
     let backendAction = 'APPROVE';
     if (action === 'REJECT') backendAction = 'REJECT';
     else if (action === 'REQUEST_INFO' || action === 'REQUEST_DOCS') backendAction = 'REQUEST_DOCS';
     
-    syncRequest('POST', `/tasks/${taskId}/action`, {
+    await api.post(`/tasks/${taskId}/action`, {
       actionDecision: backendAction,
       comment: comment
     });
   },
 
-  uploadDocument: (claimId, docName, category, user) => {
-    // Trigger direct backend upload
+  uploadDocument: async (claimId, file, category, user) => {
     try {
+      const cleanClaimId = claimId.toString().replace('CLM-', '');
       const formData = new FormData();
-      const blob = new Blob(['Additional uploaded document contents'], { type: 'application/pdf' });
-      formData.append('file', blob, docName);
+      formData.append('file', file);
       formData.append('category', category);
       
-      const xhr = new XMLHttpRequest();
-      xhr.open('POST', `http://localhost:8080/claims/${claimId}/documents`, false);
-      const token = localStorage.getItem('ins_token');
-      if (token) xhr.setRequestHeader('Authorization', `Bearer ${token}`);
-      xhr.setRequestHeader('X-User-Name', user.email || user.username);
+      await api.post(`/claims/${cleanClaimId}/documents`, formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data'
+        }
+      });
       
-      let beRole = 'ROLE_USER';
-      if (user.role === 'CLAIM_OFFICER') beRole = 'ROLE_PROCESSOR';
-      xhr.setRequestHeader('X-User-Roles', beRole);
-      xhr.send(formData);
-      
-      const res = JSON.parse(xhr.responseText);
-      return res.data;
+      const claimRes = await api.get(`/claims/${cleanClaimId}`);
+      const updatedClaim = claimRes.data.data || claimRes.data;
+      return await mapClaim(updatedClaim);
     } catch(e) {
       console.error("Failed uploading document", e);
       return null;

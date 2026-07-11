@@ -10,8 +10,8 @@ const AuditLogs = () => {
   const [searchUsername, setSearchUsername] = useState('');
   const [filterAction, setFilterAction] = useState('ALL');
 
-  const loadLogs = () => {
-    const allLogs = mockDb.getAuditLogs();
+  const loadLogs = async () => {
+    const allLogs = await mockDb.getAuditLogs();
     setLogs(allLogs);
     setFilteredLogs(allLogs);
   };

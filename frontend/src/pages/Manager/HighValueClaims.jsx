@@ -7,9 +7,12 @@ const HighValueClaims = () => {
   const [claims, setClaims] = useState([]);
 
   useEffect(() => {
-    const allClaims = mockDb.getClaims();
-    const settings = mockDb.getSettings();
-    setClaims(allClaims.filter(c => c.claimAmount >= settings.highValueThreshold));
+    const fetchClaims = async () => {
+      const allClaims = await mockDb.getClaims();
+      const settings = mockDb.getSettings();
+      setClaims(allClaims.filter(c => c.claimAmount >= settings.highValueThreshold));
+    };
+    fetchClaims();
   }, []);
 
   return (
@@ -47,7 +50,7 @@ const HighValueClaims = () => {
                   <tr key={c.id} className="hover:bg-slate-800/30 transition-all border-l-2 border-indigo-500">
                     <td className="px-6 py-4 font-semibold text-teal-400">{c.id}</td>
                     <td className="px-6 py-4">{c.customerName}</td>
-                    <td className="px-6 py-4 font-bold text-slate-200">{c.claimAmount.toFixed(2)}</td>
+                    <td className="px-6 py-4 font-bold text-slate-200">{(c.claimAmount || 0).toFixed(2)}</td>
                     <td className="px-6 py-4">{c.lossType}</td>
                     <td className="px-6 py-4">
                       <span className={`px-2 py-0.5 rounded text-xs font-semibold ${
@@ -57,12 +60,12 @@ const HighValueClaims = () => {
                       </span>
                     </td>
                     <td className="px-6 py-4">
-                      <span className="text-xs uppercase tracking-wider font-semibold text-slate-350">{c.status.replace(/_/g, ' ')}</span>
+                      <span className="text-xs uppercase tracking-wider font-semibold text-slate-355">{c.status.replace(/_/g, ' ')}</span>
                     </td>
                     <td className="px-6 py-4 text-right">
                       <button
-                        onClick={() => {
-                          const tasksList = mockDb.getTasks();
+                        onClick={async () => {
+                          const tasksList = await mockDb.getTasks();
                           const task = tasksList.find(t => t.claimId === c.id);
                           if (task) {
                             navigate(`/processor/tasks/${task.id}`);

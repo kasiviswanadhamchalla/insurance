@@ -17,8 +17,8 @@ const ClaimDetails = () => {
   const [claim, setClaim] = useState(null);
   const [uploading, setUploading] = useState(false);
 
-  const fetchClaimDetails = () => {
-    const claims = mockDb.getClaims();
+  const fetchClaimDetails = async () => {
+    const claims = await mockDb.getClaims();
     const foundClaim = claims.find(c => c.id === id);
     setClaim(foundClaim);
   };
@@ -27,7 +27,7 @@ const ClaimDetails = () => {
     fetchClaimDetails();
   }, [id]);
 
-  const handleDocumentUpload = (e) => {
+  const handleDocumentUpload = async (e) => {
     const file = e.target.files[0];
     if (!file) return;
 
@@ -37,17 +37,19 @@ const ClaimDetails = () => {
     }
 
     setUploading(true);
-    setTimeout(() => {
-      try {
-        const updated = mockDb.uploadDocument(claim.id, file.name, 'Supporting Receipt', user);
+    try {
+      const updated = await mockDb.uploadDocument(claim.id, file, 'Supporting Receipt', user);
+      if (updated) {
         setClaim(updated);
         toast.success(`Supporting document uploaded: ${file.name}. Claim status synchronized.`);
-      } catch (error) {
-        toast.error('An error occurred during file upload.');
-      } finally {
-        setUploading(false);
+      } else {
+        toast.error('Failed to upload document.');
       }
-    }, 1000);
+    } catch (error) {
+      toast.error('An error occurred during file upload.');
+    } finally {
+      setUploading(false);
+    }
   };
 
   if (!claim) {

@@ -9,10 +9,13 @@ const MyClaims = () => {
   const [filterStatus, setFilterStatus] = useState('ALL');
 
   useEffect(() => {
-    if (user) {
-      const claims = mockDb.getClaims();
-      setMyClaims(claims.filter(c => c.customerId === user.id));
-    }
+    const fetchClaims = async () => {
+      if (user) {
+        const claims = await mockDb.getClaims();
+        setMyClaims(claims.filter(c => c.customerId === user.email || c.customerId === user.username));
+      }
+    };
+    fetchClaims();
   }, [user]);
 
   const filteredClaims = filterStatus === 'ALL'
@@ -94,7 +97,7 @@ const MyClaims = () => {
                   <tr key={c.id} className="hover:bg-slate-800/30 transition-all">
                     <td className="px-6 py-4 font-semibold text-teal-400">{c.id}</td>
                     <td className="px-6 py-4">{c.lossType}</td>
-                    <td className="px-6 py-4 font-semibold text-slate-200">{c.claimAmount.toFixed(2)}</td>
+                    <td className="px-6 py-4 font-semibold text-slate-200">{(c.claimAmount || 0).toFixed(2)}</td>
                     <td className="px-6 py-4">{new Date(c.submittedAt).toLocaleDateString()}</td>
                     <td className="px-6 py-4">{getStatusBadge(c.status)}</td>
                     <td className="px-6 py-4 text-right">

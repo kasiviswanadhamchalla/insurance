@@ -10,7 +10,7 @@ spring:
     config:
       server:
         native:
-          search-locations: file:C:/Intel/hackathon-template-main/config-local
+          search-locations: file:C:/insurance/config-local,file:../config-local,file:./config-local
         # Ready for Git configuration migration by uncommenting below:
         # git:
         #   uri: https://github.com/your-org/your-config-repo.git

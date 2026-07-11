@@ -12,12 +12,12 @@ const Settings = () => {
     setSettings(mockDb.getSettings());
   }, []);
 
-  const handleToggle = (key) => {
+  const handleToggle = async (key) => {
     if (!settings) return;
     const updated = { ...settings, [key]: !settings[key] };
     setSettings(updated);
     mockDb.saveSettings(updated);
-    mockDb.addAuditLog(user.id, user.username, null, 'TOGGLE_SYSTEM_SETTING', `System setting ${key} set to ${!settings[key]}.`);
+    await mockDb.addAuditLog(user.id, user.username, null, 'TOGGLE_SYSTEM_SETTING', `System setting ${key} set to ${!settings[key]}.`);
     toast.success(`System preference updated.`);
   };
 

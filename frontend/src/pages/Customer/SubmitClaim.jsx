@@ -7,6 +7,20 @@ import * as Yup from 'yup';
 import { toast } from 'react-toastify';
 import { CloudUpload as UploadIcon, Delete as DeleteIcon, LibraryBooks as FormIcon } from '@mui/icons-material';
 
+const getEarliestAllowedDate = () => {
+  let date = new Date();
+  let businessDaysCount = 0;
+  while (businessDaysCount < 7) {
+    date.setDate(date.getDate() - 1);
+    const dayOfWeek = date.getDay(); // 0 is Sunday, 6 is Saturday
+    if (dayOfWeek !== 0 && dayOfWeek !== 6) {
+      businessDaysCount++;
+    }
+  }
+  date.setHours(0, 0, 0, 0);
+  return date;
+};
+
 const ClaimSchema = Yup.object().shape({
   policyNumber: Yup.string()
     .matches(/^POL-\d{8}$/, 'Policy number must match format: POL-XXXXXXXX (8 digits)')
@@ -19,6 +33,13 @@ const ClaimSchema = Yup.object().shape({
     .required('Loss type is required'),
   lossDate: Yup.date()
     .max(new Date(), 'Date of occurrence cannot be in the future')
+    .test('is-within-7-business-days', 'Claim must be submitted within 7 business days of the incident', (value) => {
+      if (!value) return false;
+      const incidentDate = new Date(value);
+      incidentDate.setHours(0, 0, 0, 0);
+      const earliestDate = getEarliestAllowedDate();
+      return incidentDate >= earliestDate;
+    })
     .required('Loss date is required'),
   description: Yup.string()
     .min(20, 'Please provide more details (minimum 20 characters)')
@@ -42,8 +63,9 @@ const SubmitClaim = () => {
       return;
     }
 
-    // Mock GridFS storage pointers
+    // Store actual File objects for backend upload along with metadata
     const docs = files.map(f => ({
+      file: f,
       id: `doc-${Math.floor(1000 + Math.random() * 9000)}`,
       name: f.name,
       category: f.name.toLowerCase().includes('report') ? 'Police Report' : 'Receipt / Estimate',
@@ -60,7 +82,7 @@ const SubmitClaim = () => {
     setUploadedFiles(prev => prev.filter(f => f.id !== id));
   };
 
-  const handleSubmit = (values, { setSubmitting }) => {
+  const handleSubmit = async (values, { setSubmitting }) => {
     if (uploadedFiles.length === 0) {
       toast.warning('Additional documentation has been requested. Review file requirements (minimum 1 supporting file required).');
       setSubmitting(false);
@@ -73,7 +95,7 @@ const SubmitClaim = () => {
         documents: uploadedFiles
       };
       
-      const newClaim = mockDb.submitClaim(claimData, user);
+      const newClaim = await mockDb.submitClaim(claimData, user);
       toast.success(`Claim created successfully under ID: ${newClaim.id}`);
       navigate('/dashboard');
     } catch (error) {

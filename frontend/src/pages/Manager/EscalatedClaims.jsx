@@ -7,8 +7,11 @@ const EscalatedClaims = () => {
   const [claims, setClaims] = useState([]);
 
   useEffect(() => {
-    const allClaims = mockDb.getClaims();
-    setClaims(allClaims.filter(c => c.status === 'FLAGGED_FOR_REVIEW'));
+    const fetchClaims = async () => {
+      const allClaims = await mockDb.getClaims();
+      setClaims(allClaims.filter(c => c.status === 'FLAGGED_FOR_REVIEW'));
+    };
+    fetchClaims();
   }, []);
 
   return (
@@ -45,7 +48,7 @@ const EscalatedClaims = () => {
                   <tr key={c.id} className="hover:bg-slate-800/30 transition-all border-l-2 border-orange-500">
                     <td className="px-6 py-4 font-semibold text-teal-400">{c.id}</td>
                     <td className="px-6 py-4">{c.customerName}</td>
-                    <td className="px-6 py-4 font-semibold text-slate-200">{c.claimAmount.toFixed(2)}</td>
+                    <td className="px-6 py-4 font-semibold text-slate-200">{(c.claimAmount || 0).toFixed(2)}</td>
                     <td className="px-6 py-4 font-bold text-orange-400">{c.fraudRiskScore}</td>
                     <td className="px-6 py-4">
                       <div className="flex gap-1 flex-wrap">
@@ -58,8 +61,8 @@ const EscalatedClaims = () => {
                     </td>
                     <td className="px-6 py-4 text-right">
                       <button
-                        onClick={() => {
-                          const tasksList = mockDb.getTasks();
+                        onClick={async () => {
+                          const tasksList = await mockDb.getTasks();
                           const task = tasksList.find(t => t.claimId === c.id);
                           if (task) navigate(`/processor/tasks/${task.id}`);
                         }}

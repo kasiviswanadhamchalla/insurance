@@ -36,58 +36,66 @@ const DashboardLayout = ({ children }) => {
   useEffect(() => {
     if (!user) return;
     
-    // Create custom list of notifications based on role
-    const claims = mockDb.getClaims();
-    const tasks = mockDb.getTasks();
-    const list = [];
+    const loadNotifications = async () => {
+      try {
+        const claims = await mockDb.getClaims();
+        const tasks = await mockDb.getTasks();
+        const list = [];
 
-    if (user.role === 'CUSTOMER') {
-      const myClaims = claims.filter(c => c.customerId === user.id);
-      myClaims.forEach(c => {
-        list.push({
-          id: `notif-${c.id}`,
-          title: `Claim ${c.id} Status: ${c.status}`,
-          time: new Date(c.history[c.history.length - 1].updatedAt).toLocaleTimeString(),
-          details: c.history[c.history.length - 1].comment,
-          unread: true
-        });
-      });
-    } else if (user.role === 'CLAIM_PROCESSOR') {
-      const pendingTasks = tasks.filter(t => t.assignedRole === 'CLAIM_PROCESSOR' && !t.assignedUser);
-      pendingTasks.forEach(t => {
-        list.push({
-          id: `notif-${t.id}`,
-          title: `New Pending Task in Queue`,
-          time: new Date(t.createdAt).toLocaleTimeString(),
-          details: t.title,
-          unread: true
-        });
-      });
-    } else if (user.role === 'CLAIM_MANAGER') {
-      const escalatedTasks = tasks.filter(t => t.assignedRole === 'CLAIM_MANAGER');
-      escalatedTasks.forEach(t => {
-        list.push({
-          id: `notif-${t.id}`,
-          title: `High-Value Claim Action Needed`,
-          time: new Date(t.createdAt).toLocaleTimeString(),
-          details: t.title,
-          unread: true
-        });
-      });
-    } else {
-      const logs = mockDb.getAuditLogs().slice(0, 5);
-      logs.forEach(l => {
-        list.push({
-          id: `notif-${l.id}`,
-          title: `${l.action} logged`,
-          time: new Date(l.timestamp).toLocaleTimeString(),
-          details: l.details,
-          unread: true
-        });
-      });
-    }
+        if (user.role === 'CUSTOMER') {
+          const myClaims = claims.filter(c => c.customerId === user.email || c.customerId === user.username);
+          myClaims.forEach(c => {
+            list.push({
+              id: `notif-${c.id}`,
+              title: `Claim ${c.id} Status: ${c.status}`,
+              time: new Date(c.history[c.history.length - 1].updatedAt).toLocaleTimeString(),
+              details: c.history[c.history.length - 1].comment,
+              unread: true
+            });
+          });
+        } else if (user.role === 'CLAIM_OFFICER') {
+          const pendingTasks = tasks.filter(t => t.assignedRole === 'CLAIM_OFFICER' && !t.assignedUser);
+          pendingTasks.forEach(t => {
+            list.push({
+              id: `notif-${t.id}`,
+              title: `New Pending Task in Queue`,
+              time: new Date(t.createdAt).toLocaleTimeString(),
+              details: t.title,
+              unread: true
+            });
+          });
+        } else if (user.role === 'CLAIM_MANAGER') {
+          const escalatedTasks = tasks.filter(t => t.assignedRole === 'CLAIM_MANAGER');
+          escalatedTasks.forEach(t => {
+            list.push({
+              id: `notif-${t.id}`,
+              title: `High-Value Claim Action Needed`,
+              time: new Date(t.createdAt).toLocaleTimeString(),
+              details: t.title,
+              unread: true
+            });
+          });
+        } else {
+          const logs = await mockDb.getAuditLogs();
+          const logsSlice = logs.slice(0, 5);
+          logsSlice.forEach(l => {
+            list.push({
+              id: `notif-${l.id}`,
+              title: `${l.action} logged`,
+              time: new Date(l.timestamp).toLocaleTimeString(),
+              details: l.details,
+              unread: true
+            });
+          });
+        }
 
-    setNotifications(list.slice(0, 6));
+        setNotifications(list.slice(0, 6));
+      } catch (err) {
+        console.error("Failed to load notifications", err);
+      }
+    };
+
+    loadNotifications();
   }, [user, location.pathname]);
 
   const menuItems = {

@@ -8,8 +8,8 @@ const UserManagement = () => {
   const { user: currentUser } = useAuth();
   const [users, setUsers] = useState([]);
 
-  const loadUsers = () => {
-    const list = mockDb.getUsers();
+  const loadUsers = async () => {
+    const list = await mockDb.getUsers();
     setUsers(list);
   };
 
@@ -17,17 +17,17 @@ const UserManagement = () => {
     loadUsers();
   }, []);
 
-  const handleApproveUser = (userId) => {
+  const handleApproveUser = async (userId) => {
     try {
-      const allUsers = mockDb.getUsers();
+      const allUsers = await mockDb.getUsers();
       const idx = allUsers.findIndex(u => u.id === userId);
       if (idx > -1) {
         allUsers[idx].approved = true;
-        mockDb.saveUsers(allUsers);
-        loadUsers();
+        await mockDb.saveUsers(allUsers);
+        await loadUsers();
 
         // Add audit trail entry
-        mockDb.addAuditLog(
+        await mockDb.addAuditLog(
           currentUser.id,
           currentUser.username,
           null,
